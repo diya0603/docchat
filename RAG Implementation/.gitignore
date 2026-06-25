@@ -3,3 +3,5 @@ __pycache__/
 .env
 chroma_langchain_db/
 *.pyc
+
+*.pdf
