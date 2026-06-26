@@ -50,7 +50,7 @@ def make_retrieve_tool(document_id: int):
         """Retrieve the respective docs to help answer a query."""
         retrieved_docs = vector_store.similarity_search(
             query,
-            k=4,
+            k=6,
             filter={"document_id": document_id}
         )
         serialized = "\n\n".join(
@@ -77,3 +77,11 @@ def make_agent(model, document_id: int):
 def run_query(messages_history, agent):
     result = agent.invoke({"messages": messages_history})
     return result["messages"][-1].content
+
+async def stream_query(messages_history, agent):
+    async for chunk, metadata in agent.astream(
+        {"messages":messages_history},
+        stream_mode="messages"
+    ):
+        if chunk.content and metadata.get("langgraph_node") == "agent":
+            yield chunk.content

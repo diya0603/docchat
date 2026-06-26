@@ -1,16 +1,23 @@
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from pydantic import BaseModel
-from rag import load_and_split, index_and_store, make_agent, run_query, model
+from rag import load_and_split, index_and_store, make_agent, run_query, model, stream_query
 from sqlalchemy.orm import Session
 from database import get_db, Base, engine
 from models import User, Document, Conversation, Message
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user
-from typing import Optional
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 
 
 app =FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -85,12 +92,19 @@ async def ask_query(request:  QueryRequest,
 
 
     agent=make_agent(model, request.document_id)
-    answer = run_query(history, agent)
-    ai_message = Message(conversation_id=conversation.id, role="assistant", content=answer)
-    db.add(ai_message)
-    db.commit()
+    
+    async def event_generator():
+        full_answer = ""
+        async for piece in stream_query(history, agent):
+            full_answer+=piece
+            yield f"data: {piece}\n\n"
 
-    return {"answer": answer, "conversation_id": conversation.id}
+        ai_message = Message(conversation_id=conversation.id, role="assistant", content=full_answer)
+        db.add(ai_message)
+        db.commit()
+
+        yield "data: [DONE]\n\n"
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/signup")
 async def signup(request: SignupRequest, db: Session = Depends(get_db)):
@@ -116,3 +130,38 @@ async def login(request: LoginRequest, db:Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     access_token =create_access_token(data={"sub":user.email})
     return {"access_token":access_token, "token_type":"bearer"}
+
+
+@app.get("/documents")
+async def get_documents(
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == current_user).first()
+    documents = db.query(Document).filter(Document.user_id == user.id).all()
+    return [
+        {"id": doc.id, "filename": doc.filename, "created_at": doc.created_at}
+        for doc in documents
+    ]
+
+@app.get("/conversations/{document_id}/messages")
+async def get_conversation_messages(
+    document_id: int,
+    current_user: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == current_user).first()
+
+    conversation = db.query(Conversation).filter(
+        Conversation.document_id == document_id,
+        Conversation.user_id == user.id
+    ).first()
+
+    if not conversation:
+        return []
+
+    messages = db.query(Message).filter(
+        Message.conversation_id == conversation.id
+    ).order_by(Message.created_at).all()
+
+    return [{"role": m.role, "content": m.content} for m in messages]

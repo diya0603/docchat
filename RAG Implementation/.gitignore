@@ -5,3 +5,5 @@ chroma_langchain_db/
 *.pyc
 
 *.pdf
+
+run_eval.py
