@@ -7,6 +7,7 @@ from langchain.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import chromadb
 
 load_dotenv()
 
@@ -18,10 +19,15 @@ model = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 
+chroma_client = chromadb.HttpClient(
+    host=os.getenv("CHROMA_HOST", "localhost"),
+    port=int(os.getenv("CHROMA_PORT", "8001"))
+)
+
 vector_store = Chroma(
-    collection_name ="example_collection",
+    client=chroma_client,
+    collection_name="example_collection",
     embedding_function=embeddings,
-    persist_directory="./chroma_langchain_db"
 )
 
 def load_and_split(filepath):
