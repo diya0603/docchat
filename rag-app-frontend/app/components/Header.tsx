@@ -39,7 +39,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/login" className="text-gray-600 hover:text-black">
+              <Link href="/login" className="rounded-md bg-black px-3 py-1.5 text-white hover:bg-gray-800">
                 Log in
               </Link>
               <Link

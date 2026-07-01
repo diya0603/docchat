@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
+import PageContainer from '../components/PageContainer';
 
 interface DocumentItem {
   id: number;
@@ -62,6 +63,7 @@ export default function DocumentsPage() {
   }
 
   return (
+    <PageContainer>
     <div className="mx-auto max-w-2xl p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your Documents</h1>
@@ -72,7 +74,7 @@ export default function DocumentsPage() {
 
       <Link
         href="/upload"
-        className="mb-6 inline-block rounded-md bg-black px-4 py-2 text-sm font-medium text-white"
+        className="mb-6 inline-block rounded-md border border-gray-700 px-4 py-2 text-sm font-medium text-gray-300 hover:border-gray-500 hover:text-white"
       >
         + Upload new document
       </Link>
@@ -86,12 +88,16 @@ export default function DocumentsPage() {
           <Link
             key={doc.id}
             href={`/chat/${doc.id}`}
-            className="block rounded-md border p-4 text-sm hover:bg-gray-50"
+            className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950 p-4 text-sm hover:border-gray-600 hover:bg-gray-900 transition-colors"
           >
-            {doc.filename}
+            <span className="text-gray-200 truncate mr-4">{doc.filename}</span>
+            <span className="text-xs text-gray-500 ml-4 shrink-0">
+              {new Date(doc.created_at).toLocaleDateString()}
+            </span>
           </Link>
         ))}
       </div>
     </div>
+    </PageContainer>
   );
 }

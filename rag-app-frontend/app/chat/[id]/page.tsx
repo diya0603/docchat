@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import PageContainer from '@/app/components/PageContainer';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   role: string;
@@ -71,7 +73,11 @@ export default function ChatPage() {
 
     const question = input;
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: question }]);
+    setMessages((prev) => [
+        ...prev,
+        { role: 'user', content: question },
+        { role: 'assistant', content: '' },
+      ]);
     setIsSending(true);
     setError('');
 
@@ -95,7 +101,7 @@ export default function ChatPage() {
       throw new Error('Failed to get answer');
     }
 
-      setMessages((prev) => [...prev, {role:'assitant', content:''}]);
+      //setMessages((prev) => [...prev, {role:'assistant', content:''}]);
       const reader =  res.body.getReader();
       const decoder = new TextDecoder();
       let buffer='';
@@ -118,13 +124,22 @@ export default function ChatPage() {
           setMessages((prev) => {
             const updated = [...prev];
             updated[updated.length-1]={
-              role: 'asssitant',
+              role: 'assistant',
               content: updated[updated.length-1].content + content,
             };
             return updated;
           });
         }
       }
+      const refreshRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/conversations/${documentId}/messages`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (refreshRes.ok) {
+        const refreshed = await refreshRes.json();
+        setMessages(refreshed);
+      }
+
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -139,50 +154,77 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="mx-auto flex h-screen max-w-2xl flex-col p-4">
-      <h1 className="mb-4 text-xl font-bold">Chat</h1>
+  <PageContainer>
+  <div className="flex flex-col" style={{ height: 'calc(100vh - 57px)' }}>
+    {/* Header bar */}
+    <div className="border-b border-gray-800 px-4 py-3">
+      <h1 className="text-sm font-medium text-gray-400">Chat</h1>
+    </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`max-w-[80%] rounded-lg p-3 text-sm ${
-              msg.role === 'user'
-                ? 'ml-auto bg-black text-white'
-                : 'bg-gray-100 text-gray-900'
-            }`}
-          >
-            {msg.content}
+    {/* Messages */}
+    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {messages.length === 0 && !isSending && (
+        <p className="text-center text-sm text-gray-600 mt-8">
+          Ask a question about your document to get started.
+        </p>
+      )}
+
+      {messages.map((msg, i) => (
+        msg.content ? (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[75%] rounded-xl px-4 py-3 text-sm leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-900 border border-gray-800 text-gray-200'
+              }`}
+            >
+              <ReactMarkdown
+                components={{
+                  strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                  li: ({ children }) => <li className="mb-1">{children}</li>,
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            </div>
           </div>
-        ))}
+        ) : null
+      ))}
 
-        {isSending && (
-          <div className="max-w-[80%] rounded-lg bg-gray-100 p-3 text-sm text-gray-500">
-            Thinking...
-          </div>
-        )}
+      {/* {isSending && (
+        <div className="max-w-[75%] rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-500">
+          Thinking...
+        </div>
+      )} */}
 
-        <div ref={bottomRef} />
-      </div>
+      <div ref={bottomRef} />
+    </div>
 
-      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+    {error && <p className="px-4 text-sm text-red-400">{error}</p>}
 
-      <form onSubmit={handleSend} className="mt-4 flex gap-2">
+    {/* Input */}
+    <div className="border-t border-gray-800 px-4 py-3">
+      <form onSubmit={handleSend} className="flex gap-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask a question..."
-          className="flex-1 rounded-md border px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-gray-500 focus:outline-none"
         />
         <button
           type="submit"
           disabled={isSending}
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-gray-200 disabled:opacity-50"
         >
           Send
         </button>
       </form>
     </div>
-  );
+  </div>
+  </PageContainer>
+);
 }

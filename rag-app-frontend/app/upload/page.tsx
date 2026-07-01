@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import PageContainer from '../components/PageContainer';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -87,42 +88,53 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border p-8">
-        <h1 className="text-2xl font-bold">Upload a document</h1>
+  <PageContainer centered>
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-sm space-y-4 rounded-xl border border-gray-800 bg-gray-950 p-8"
+    >
+      <h1 className="text-2xl font-bold">Upload a document</h1>
+      <p className="text-sm text-gray-500">PDF files only. Start chatting instantly after upload.</p>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <div>
-          <label className="block text-sm font-medium">PDF file</label>
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={handleFileChange}
-            required
-            className="mt-1 w-full text-sm"
-          />
-        </div>
+      <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-700 px-4 py-8 text-center hover:border-gray-500 transition-colors">
+        <span className="text-2xl mb-2">📄</span>
+        <span className="text-sm text-gray-400">
+          {file ? file.name : 'Click to select a PDF'}
+        </span>
+        <span className="mt-1 text-xs text-gray-600">
+          {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF files only'}
+        </span>
+        <input
+          type="file"
+          accept="application/pdf"
+          onChange={handleFileChange}
+          required
+          className="hidden"
+        />
+      </label>
 
-        <button
-          type="submit"
-          disabled={isUploading}
-          className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {isUploading ? 'Uploading...' : 'Upload'}
-        </button>
-        {isUploading && (
+      {isUploading && (
         <div className="w-full">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
             <div
-                className="h-full bg-black transition-all"
-                style={{ width: `${uploadProgress}%` }}
+              className="h-full bg-white transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
             />
-            </div>
-            <p className="mt-1 text-xs text-gray-500">{uploadProgress}%</p>
+          </div>
+          <p className="mt-1 text-right text-xs text-gray-500">{uploadProgress}%</p>
         </div>
-        )}
-      </form>
-    </div>
-  );
+      )}
+
+      <button
+        type="submit"
+        disabled={isUploading || !file}
+        className="w-full rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-gray-200 disabled:opacity-50"
+      >
+        {isUploading ? 'Uploading...' : 'Upload'}
+      </button>
+    </form>
+  </PageContainer>
+);
 }
