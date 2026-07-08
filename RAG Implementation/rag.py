@@ -19,9 +19,8 @@ model = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 
-chroma_client = chromadb.HttpClient(
-    host=os.getenv("CHROMA_HOST", "localhost"),
-    port=int(os.getenv("CHROMA_PORT", "8001"))
+chroma_client = chromadb.PersistentClient(
+    path=os.getenv("CHROMA_PATH", "./chroma_langchain_db")
 )
 
 vector_store = Chroma(
