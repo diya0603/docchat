@@ -42,7 +42,7 @@ export default function DocumentsPage() {
           throw new Error('Failed to load documents');
         }
 
-        const data = await res.json();
+        const data: DocumentItem[] = await res.json();
         setDocuments(data);
       } catch (err) {
         if (err instanceof Error) {
